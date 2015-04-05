@@ -1,5 +1,5 @@
 def match_float(str)
-  str.match(/^-?\d+(\.?\d+|)$/)
+  str.match(/^-?\d+(\.\d+|)$/)
 end
 
 def not_valid_input
