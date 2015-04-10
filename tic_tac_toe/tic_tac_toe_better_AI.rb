@@ -45,7 +45,7 @@ def computer_make_choice(board)
   slots_available = empty_slots(board)
   priorities = {}
   slots_available.each do |slot|
-    priorities[s] = assign_priority(slot,board)
+    priorities[slot] = assign_priority(slot,board)
   end
   priorities.max_by{|k,v| v}[0]
 end
@@ -72,7 +72,7 @@ def assign_priority(slot,board)
 
   weight = 0
   all_rows = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
-  rows_that_have_the_slot = all_rows.select{|r| r.include? s}
+  rows_that_have_the_slot = all_rows.select{|row| row.include? slot}
   non_blocked_player_rows = 0
   non_blocked_computer_rows = 0
   empty_rows = 0
@@ -154,7 +154,7 @@ def who_is_winner(board)
   winning_cases.each do |c|
     if ((board[c[0]] == 'o' || board[c[0]] == 'x') && 
 	board[c[0]] == board[c[1]] && board[c[0]] == board[c[2]])
-      winner = b[c[0]]
+      winner = board[c[0]]
     end
   end
   winner
