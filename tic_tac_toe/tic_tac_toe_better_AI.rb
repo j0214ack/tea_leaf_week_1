@@ -26,30 +26,31 @@ def draw_board(b)
   puts 
 end
 
-def empty_slots(b)
-  Array(0..8).select{|i| b[i] == ' '}
+def empty_slots(board)
+  #Array(0..8).select{|i| board[i] == ' '}
+  board.each_with_index.select{|value,index| value == ' ' }.map{|value,index| index}
 end
 
-def valid_choice?(choice,b)
+def valid_choice?(choice,board)
   return false if choice.match(/[1-9]/).nil?
   slot = choice.to_i - 1
-  return empty_slots(b).include? slot
+  return empty_slots(board).include? slot
 end
 
-def computer_make_choice(b)
+def computer_make_choice(board)
   # There are only 9 slots and it will eventually get fewer, we could check all the slots one by one
   # First find empty slots
   # examine each slot and assign priority
 
-  slots_available = empty_slots(b)
+  slots_available = empty_slots(board)
   priorities = {}
-  slots_available.each do |s|
-    priorities[s] = assign_priority(s,b)
+  slots_available.each do |slot|
+    priorities[s] = assign_priority(slot,board)
   end
   priorities.max_by{|k,v| v}[0]
 end
 
-def assign_priority(s,b)
+def assign_priority(slot,board)
   # the priority should be
   # 1. make himself complete three-in-a-row
   # 2. block player's two-in-a-row
@@ -76,9 +77,8 @@ def assign_priority(s,b)
   non_blocked_computer_rows = 0
   empty_rows = 0
   
-  rows_that_have_the_slot.each do |r|
-    #binding.pry
-    two_in_a_row = two_in_the_row?(s,r,b) 
+  rows_that_have_the_slot.each do |row|
+    two_in_a_row = two_in_the_row?(slot,row,board) 
     # 1. make himself complete three-in-a-row
     if two_in_a_row == 'x'
       weight += 100000
@@ -89,11 +89,11 @@ def assign_priority(s,b)
 
     else
       # check if the row is a non-blocked row for step 3,4
-      if empty_row?(s,r,b)
+      if empty_row?(slot,row,board)
 	empty_rows += 1
-      elsif non_blocked_row?(s,r,b) == 'x'
+      elsif non_blocked_row?(slot,row,board) == 'x'
 	non_blocked_computer_rows += 1
-      elsif non_blocked_row?(s,r,b) == 'o'
+      elsif non_blocked_row?(slot,row,board) == 'o'
 	non_blocked_player_rows += 1
       end
     end
@@ -112,74 +112,48 @@ def assign_priority(s,b)
   # 6. if the row is totally empty (5 points)
   weight += empty_rows * 5
   # 7. middle over corners over sides (2,1,0)
-  if s == 4 # middle
+  if slot == 4 # middle
     weight += 2
-  elsif [0,2,6,8].include? s
+  elsif [0,2,6,8].include? slot
     weight += 1
   end
-  #binding.pry
   weight
 end
 
-def empty_row?(s,row,b)
+def empty_row?(slot,row,board)
   r = row.dup
-  r.delete(s)
-  (b[r[0]] == b[r[1]]) && (b[r[0]] == ' ')
+  r.delete(slot)
+  (board[r[0]] == board[r[1]]) && (board[r[0]] == ' ')
 end
 
-def non_blocked_row?(slot,row,b)
+def non_blocked_row?(slot,row,board)
   r = row.dup.delete(slot)
-  if (b[r[0]] == 'x' && b[r[1]] == ' ') || (b[r[0]] == ' ' && b[r[1]] == 'x') 
+  if (board[r[0]] == 'x' && board[r[1]] == ' ') || (board[r[0]] == ' ' && board[r[1]] == 'x') 
     'x'
-  elsif (b[r[0]] == 'o' && b[r[1]] == ' ') || (b[r[0]] == ' ' && b[r[1]] == 'o') 
+  elsif (board[r[0]] == 'o' && board[r[1]] == ' ') || (board[r[0]] == ' ' && board[r[1]] == 'o') 
     'o'
   else
     nil
   end
 end
 
-def two_in_the_row?(slot,row,b)
+def two_in_the_row?(slot,row,board)
   r = row.dup
   r.delete(slot)
-  if (b[r[0]] == b[r[1]]) && (['x','o'].include? b[r[0]])
-    b[r[0]]
+  if (board[r[0]] == board[r[1]]) && (['x','o'].include? board[r[0]])
+    board[r[0]]
   else
     nil
   end
 end
 
-# return nil if not, return 'x' or 'o' if yes, return :both if both
-#def two_in_the_row_at_the_empty_slot(slot,b) 
-  #all_rows = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
-  #rows_with_the_slot = rows.select{|r| r.include? slot}
-  #result = nil
-  #rows_with_the_slot.each do |r|
-    #r.delete[slot]
-    #if r[0] == r[1]
-      #if r[0] == 'x'
-	#if result.nil?
-	  #result = 'x'
-	#elsif result == 'o'
-	  #result = :both
-	#end
-      #elsif r[0] == 'o'
-	#if result.nil?
-	  #result = 'o'
-	#elsif result == 'x'
-	  #result = :both
-	#end
-      #end
-    #end
-  #end
-  #result
-#end
-
 # return nil if no winner
-def who_is_winner(b)
+def who_is_winner(board)
   winner = nil
-  winning_case = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
-  winning_case.each do |c|
-    if ((b[c[0]] == 'o' || b[c[0]] == 'x') && b[c[0]] == b[c[1]] && b[c[0]] == b[c[2]])
+  winning_cases = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
+  winning_cases.each do |c|
+    if ((board[c[0]] == 'o' || board[c[0]] == 'x') && 
+	board[c[0]] == board[c[1]] && board[c[0]] == board[c[2]])
       winner = b[c[0]]
     end
   end
@@ -203,8 +177,6 @@ begin
     winner = who_is_winner(board)
     break if winner || empty_slots(board).size == 0
 
-    #puts "Computer is making a choice..."
-    #sleep(2)
     computer_choice = computer_make_choice(board)
     board[computer_choice] = 'x'
     draw_board(board)
@@ -222,4 +194,5 @@ begin
   end
 
   puts "Play again?(y/n)"
-end while gets.chomp == 'y'
+end while gets.chomp.downcase == 'y'
+
