@@ -1,43 +1,8 @@
 # encoding: UTF-8
 require 'pry'
 
-# black jack
-#
-# make a deck of cards(maybe four deck?)
-# set player's token amount
-# ask for bets
-# deal two cards to both player and dealer
-# show two cards of the player and one card of the dealer
-# check if dealer has blackjack
-#   if yes, player loses and go to next round
-# ask player for choices(hit, stand)
-#   if hit, 
-#     deal one new card to player, show it on screen
-#     check if player is busted
-#       if yes, player loses and go to next round
-#       if not, ask player to make choice again
-#   if stand
-#     computer make a choice(hit, stand)
-#     if hit
-#       deal one new card to dealer(computer), show it on screen
-#       check if dealer(computer) is busted
-#         if yes, player wins and go to next round
-#         if not, computer make another choice
-#     if stand
-#	reveal the hidden card and compare player and computers hands' value
-#	if equal
-#	  it a tie
-#	if computer is bigger
-#	  player loses and loses his money
-#	if player is bigger
-#	  player wins and gained same amount of his bets
-
-# oh, dear... look what I've found
-# http://en.wikipedia.org/wiki/Playing_cards_in_Unicode
-# But it is actually quite useless...
-
-def dealer_says(sth)
-  puts "=> #{sth}"
+def dealer_says(something)
+  puts "=> #{something}"
 end
 
 def show_card(card,type = "image") #
@@ -61,22 +26,22 @@ def show_card(card,type = "image") #
   end
 end
 
-def cards_to_str_arr(cards)
+def cards_to_string_array(cards)
   cards.map{|card| "🂠 #{show_card(card)}"}
 end
 
 def draw_status(dealer_cards,player_cards,hide_first_dealer_card = true)
   system "clear"
-  dealer_hands = cards_to_str_arr(dealer_cards)
+  dealer_hands = cards_to_string_array(dealer_cards)
   dealer_hands[0] = "🂠 ??" if hide_first_dealer_card
-  player_hands = cards_to_str_arr(player_cards)
+  player_hands = cards_to_string_array(player_cards)
   puts "   Dealer hands: #{dealer_hands.join(" | ")}"
   puts 
   puts 
-  puts "    Your  hands: #{player_hands.join(" | ")}"
+  puts "    Your  hands: #{player_hands.join(" | ")}  Total: #{count_points(player_cards)}"
 end
 
-def winner?(dealer_cards,player_cards)
+def winner_is(dealer_cards,player_cards)
   dealer_points = count_points(dealer_cards)
   player_points = count_points(player_cards)
   case dealer_points <=> player_points
@@ -105,18 +70,23 @@ def count_points(cards)
       sum + card[1]
     end
   end
-  aces.times do |n|
+  aces.times do
     points += 10 unless (points + 10) > 21
   end
   points
 end
 
-def dealer_hit_or_stand?(dealer_cards)
+def dealer_hit_or_stand(dealer_cards)
   if count_points(dealer_cards) < 17
     'h'
   else
     's'
   end
+end
+
+def blackjack?(cards)
+  return false unless cards.size == 2
+  return count_points(cards) == 21
 end
 
 SUITS = {'s' => ['spade',"♠"], 'h' => ["heart","♥"], 'd' => ["diamond","♦"], 'c' => ["club","♣"]}
@@ -137,14 +107,14 @@ dealer_says "Hello, #{player_name}. How much money do you have with you?"
 player_money = 0
 loop do
   player_input = gets.chomp
-  if player_input.match(/\d+/)
+  if player_input.match(/^\d+$/) && player_input.to_i > 0
     player_money = player_input.to_i
     dealer_says "Great, exchanging your money to token. Please wait...(press enter to continue)"
     gets
     break
   else
     sentences = ["That is not a decent way to talk about your money. Please say again.",
-		 "Pardon?", "Sorry, sir. I didn't catch you.", "How much?", "Excuse me?"]
+                 "Pardon?", "Sorry, sir. I didn't catch you.", "How much?", "Excuse me?"]
     dealer_says sentences.sample
   end
 end
@@ -156,7 +126,7 @@ begin # A round
   loop do
     puts "Put your bets:" 
     player_input = gets.chomp
-    if (player_input.match(/\d+/) && player_input.to_i.between?(1,player_money))
+    if (player_input.match(/^\d+$/) && player_input.to_i.between?(1 ,player_money))
       bets = player_input.to_i
       player_money -= bets
       break
@@ -169,49 +139,58 @@ begin # A round
   player_cards = []
   winner = nil
 
-  2.times do |i|
+  2.times do
     dealer_cards << deck.pop
     player_cards << deck.pop
   end
 
+  # check dealer black jack
+  if blackjack?(dealer_cards)
+    draw_status(dealer_cards, player_cards, false)
+    dealer_says "Dealer has a BlackJack! (press enter to continue)"
+    gets
+    winner = winner_is(dealer_cards, player_cards)
+    break
+  end
+  # check player black jack
+  if blackjack?(player_cards)
+    draw_status(dealer_cards, player_cards, false)
+    dealer_says "You have a BlackJack! (press enter to continue)"
+    gets
+    winner = "player"
+    break
+  end
+
   begin
-    draw_status(dealer_cards,player_cards,true)
-    # check dealer black jack
-    if (dealer_cards[1][1].between?(10,13) || dealer_cards[1][1] == 1)
-      if count_points(dealer_cards) == 21
-	draw_status(dealer_cards,player_cards,false)
-	dealer_says "Dealer has a blackjack! (press enter to continue)"
-	gets
-	winner = winner?(dealer_cards,player_cards)
-	break
-      end
-    end
+    draw_status(dealer_cards, player_cards, true)
+
+    # player turn
     dealer_says "You bet #{bets} this round, and you have #{player_money} dollars left"
     begin
-      dealer_says "Would you wish to hit, or stand? (h/s)"
+      dealer_says "Would you wish to 1) hit or 2) stand?"
       player_action = gets.chomp
-    end until (player_action.downcase == 'h' || player_action.downcase == 's')
+    end until %w(1 2).include? player_action.downcase
 
-    if player_action == 'h'
+    if player_action == '1' # hit
       player_cards << deck.pop
       winner = "dealer" if busted?(player_cards)
-    elsif player_action == 's'
+    elsif player_action == '2' # stand
       begin
-	dealer_action = dealer_hit_or_stand?(dealer_cards)
-	dealer_says "Let me think....(press enter to continue)"
-	gets
-	if dealer_action == 'h'
-	  dealer_cards << deck.pop
-	  draw_status(dealer_cards,player_cards,true)
-	  winner = "player" if busted?(dealer_cards)
-	elsif dealer_action == 's'
-	  winner = winner?(dealer_cards,player_cards)
-	end 
+        dealer_action = dealer_hit_or_stand(dealer_cards)
+        dealer_says "Let me think....(press enter to continue)"
+        gets
+        if dealer_action == 'h'
+          dealer_cards << deck.pop
+          draw_status(dealer_cards, player_cards, false)
+          winner = "player" if busted?(dealer_cards)
+        elsif dealer_action == 's'
+          winner = winner_is(dealer_cards, player_cards)
+        end 
       end until winner
     end # end if player_action
   end until winner
 
-  draw_status(dealer_cards,player_cards,false)
+  draw_status(dealer_cards, player_cards, false)
   case winner
   when "push"
     dealer_says "It's a push! You can have your bets back."
